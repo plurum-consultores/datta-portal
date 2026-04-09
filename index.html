@@ -746,7 +746,7 @@ async function saveDashboard() {
     if (!file) { toast('Selecciona un archivo HTML', 'err'); return; }
     set('upload-st', '⬆️ Subiendo archivo...');
     const path = `${cliente_id}/${Date.now()}_${file.name}`;
-    const { error: ue } = await sb.storage.from('dashboards').upload(path, file, { contentType: 'text/html', upsert: true });
+    const { error: ue } = await sb.storage.from('dashboards').upload(path, file, { contentType: 'text/html; charset=utf-8', upsert: true, cacheControl: '3600' });
     set('upload-st', '');
     if (ue) { toast(ue.message, 'err'); return; }
     const { data: ud } = sb.storage.from('dashboards').getPublicUrl(path);
@@ -817,18 +817,34 @@ function esc(s) {
 // ════════════════════════════════════════
 let appInitialized = false;
 
+function bootApp(session) {
+  const p = new URLSearchParams(window.location.search);
+  hide('screen-loading');
+  if (session?.user) {
+    appInitialized = true;
+    initApp(session.user);
+  } else {
+    showScreen('login');
+    if (p.get('signup') === 'true') showSignup();
+  }
+}
+
+// Timeout de seguridad: si en 3s no responde Supabase, mostramos login
+const bootTimeout = setTimeout(() => {
+  if (!appInitialized) {
+    hide('screen-loading');
+    showScreen('login');
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('signup') === 'true') showSignup();
+  }
+}, 3000);
+
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'INITIAL_SESSION') {
-    if (session?.user) {
-      appInitialized = true;
-      await initApp(session.user);
-    } else {
-      hide('screen-loading');
-      showScreen('login');
-      const p = new URLSearchParams(window.location.search);
-      if (p.get('signup') === 'true') showSignup();
-    }
+    clearTimeout(bootTimeout);
+    bootApp(session);
   } else if (event === 'SIGNED_IN' && session?.user && !appInitialized) {
+    clearTimeout(bootTimeout);
     appInitialized = true;
     await initApp(session.user);
   } else if (event === 'SIGNED_OUT') {
