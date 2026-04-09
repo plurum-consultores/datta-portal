@@ -547,13 +547,9 @@ function showView(name) {
 // VIEWER
 // ════════════════════════════════════════
 function openDashboard(url, nombre) {
-  viewerUrl = url;
-  g('dash-iframe').src = url;
-  set('viewer-title', nombre);
-  document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-  g('view-viewer').classList.remove('hidden');
+  window.open(url, '_blank');
 }
-function closeViewer() { g('dash-iframe').src = ''; showView('dashboards'); }
+function closeViewer() { showView('dashboards'); }
 function openTab() { if (viewerUrl) window.open(viewerUrl, '_blank'); }
 
 // ════════════════════════════════════════
