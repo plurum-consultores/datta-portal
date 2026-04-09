@@ -817,20 +817,18 @@ function esc(s) {
 // ════════════════════════════════════════
 let appInitialized = false;
 
-sb.auth.getSession().then(async ({ data: { session } }) => {
-  if (session?.user) {
-    appInitialized = true;
-    await initApp(session.user);
-  } else {
-    hide('screen-loading');
-    showScreen('login');
-    const p = new URLSearchParams(window.location.search);
-    if (p.get('signup') === 'true') showSignup();
-  }
-});
-
 sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session?.user && !appInitialized) {
+  if (event === 'INITIAL_SESSION') {
+    if (session?.user) {
+      appInitialized = true;
+      await initApp(session.user);
+    } else {
+      hide('screen-loading');
+      showScreen('login');
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('signup') === 'true') showSignup();
+    }
+  } else if (event === 'SIGNED_IN' && session?.user && !appInitialized) {
     appInitialized = true;
     await initApp(session.user);
   } else if (event === 'SIGNED_OUT') {
