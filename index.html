@@ -126,6 +126,8 @@
     .empty { text-align: center; padding: 60px 20px; color: #9ca3af; }
     .empty-icon { font-size: 44px; margin-bottom: 12px; }
     .hidden { display: none !important; }
+    #screen-loading { min-height:100vh; background:#0d1017; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
+    #screen-loading .spinner { width:32px; height:32px; border-width:3px; }
     code { background: #f3f4f6; padding: 2px 7px; border-radius: 4px; font-size: 12px; }
     h1 { font-size: 24px; font-weight: 700; color: #12161f; margin: 0 0 4px; }
     .page-sub { color: #9ca3af; font-size: 14px; margin: 0 0 28px; }
@@ -133,6 +135,12 @@
   </style>
 </head>
 <body>
+
+<!-- LOADING -->
+<div id="screen-loading">
+  <div style="font-size:24px;font-weight:800;color:white;letter-spacing:-1px;">Datta<span style="color:var(--green);">Portal</span></div>
+  <div class="spinner"></div>
+</div>
 
 <!-- TOASTS -->
 <div id="toasts"></div>
@@ -811,13 +819,23 @@ function esc(s) {
 // ════════════════════════════════════════
 // BOOT
 // ════════════════════════════════════════
-sb.auth.onAuthStateChange(async (event, session) => {
+sb.auth.getSession().then(async ({ data: { session } }) => {
   if (session?.user) {
     await initApp(session.user);
   } else {
+    hide('screen-loading');
     showScreen('login');
     const p = new URLSearchParams(window.location.search);
     if (p.get('signup') === 'true') showSignup();
+  }
+});
+
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session?.user) {
+    await initApp(session.user);
+  } else if (event === 'SIGNED_OUT') {
+    hide('screen-loading');
+    showScreen('login');
   }
 });
 </script>
