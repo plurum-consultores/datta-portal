@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Datta Portal — Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'DM Sans', sans-serif; }
+    body { background: #0d1017; display: flex; flex-direction: column; height: 100vh; }
+
+    #loading {
+      position: fixed; inset: 0; background: #0d1017;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 999;
+    }
+    .logo { font-size: 22px; font-weight: 800; color: white; letter-spacing: -0.5px; }
+    .logo span { color: #8DC63F; }
+    .spinner {
+      width: 28px; height: 28px;
+      border: 2px solid rgba(141,198,63,.3);
+      border-top-color: #8DC63F;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #error {
+      position: fixed; inset: 0; background: #0d1017;
+      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    }
+    #error .logo { margin-bottom: 8px; }
+    #error p { color: #9ca3af; font-size: 14px; }
+    #error a {
+      background: #8DC63F; color: white; padding: 10px 24px;
+      border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; margin-top: 8px;
+    }
+
+    #bar {
+      height: 48px; background: #1a1f2e;
+      display: none; align-items: center; padding: 0 20px; gap: 16px; flex-shrink: 0;
+    }
+    #bar .back {
+      background: rgba(255,255,255,.08); border: none; color: #e5e7eb;
+      padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; font-family: inherit;
+    }
+    #bar .back:hover { background: rgba(255,255,255,.15); }
+    #bar .title { color: white; font-size: 14px; font-weight: 600; }
+    #bar .badge {
+      background: rgba(141,198,63,.15); color: #8DC63F;
+      border: 1px solid rgba(141,198,63,.3); padding: 3px 10px;
+      border-radius: 999px; font-size: 11px; font-weight: 700;
+    }
+
+    iframe {
+      flex: 1; border: none; width: 100%; display: none;
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="logo">Datta<span>Portal</span></div>
+  <div class="spinner"></div>
+  <p style="color:#4b5563;font-size:12px;letter-spacing:.5px;">Verificando acceso...</p>
+</div>
+
+<div id="error">
+  <div class="logo">Datta<span>Portal</span></div>
+  <p id="error-msg">No tienes autorización para ver este contenido.</p>
+  <a href="/">← Volver al portal</a>
+</div>
+
+<div id="bar">
+  <button class="back" onclick="window.close()">← Cerrar</button>
+  <span class="title" id="dash-title"></span>
+  <span class="badge">🔒 Acceso seguro</span>
+</div>
+
+<iframe id="frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+
+<script>
+const SB_URL  = 'https://ryoqpmtymqehgheetmlu.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ5b3FwbXR5bXFlaGdoZWV0bWx1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2OTc5MDUsImV4cCI6MjA5MTI3MzkwNX0.XPlUS2Kl1A9aFW82DuVcV-H1MREsQC4hMOgKm0Ma6Ms';
+const sb = supabase.createClient(SB_URL, SB_ANON);
+
+function showError(msg) {
+  document.getElementById('loading').style.display = 'none';
+  const err = document.getElementById('error');
+  err.style.display = 'flex';
+  if (msg) document.getElementById('error-msg').textContent = msg;
+}
+
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const url    = params.get('url');
+  const nombre = params.get('nombre') || 'Dashboard';
+
+  if (!url) { showError('URL de dashboard no especificada.'); return; }
+
+  // Verificar sesión activa
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session?.user) {
+    showError('Debes iniciar sesión para ver este contenido.');
+    return;
+  }
+
+  // Verificar que el usuario tiene perfil activo
+  const { data: profile } = await sb.from('profiles')
+    .select('activo, rol')
+    .eq('id', session.user.id)
+    .single();
+
+  if (!profile || !profile.activo) {
+    showError('Tu cuenta no tiene acceso activo.');
+    return;
+  }
+
+  // Todo ok — mostrar dashboard
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('dash-title').textContent = nombre;
+  document.getElementById('bar').style.display = 'flex';
+
+  const frame = document.getElementById('frame');
+  frame.style.display = 'block';
+  frame.src = url;
+}
+
+init();
+</script>
+</body>
+</html>
