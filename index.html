@@ -549,8 +549,31 @@ function showView(name) {
 // ════════════════════════════════════════
 // VIEWER
 // ════════════════════════════════════════
-function openDashboard(url, nombre) {
-  window.open(url, '_blank');
+async function openDashboard(storageUrl, nombre) {
+  // Extraer el path del archivo desde la URL de Supabase Storage
+  // o usar directamente si es URL externa
+  if (storageUrl.includes('supabase.co/storage')) {
+    try {
+      // Extraer el path relativo del archivo
+      const match = storageUrl.match(/dashboards\/(.+)$/);
+      if (!match) { window.open(storageUrl, '_blank'); return; }
+      const path = match[1];
+      // Generar URL firmada que expira en 1 hora
+      const { data, error } = await sb.storage.from('dashboards').createSignedUrl(path, 3600);
+      if (error || !data?.signedUrl) {
+        toast('Error generando acceso al dashboard', 'err');
+        return;
+      }
+      // Abrir viewer con la URL firmada
+      const viewerUrl = 'viewer.html?url=' + encodeURIComponent(data.signedUrl) + '&nombre=' + encodeURIComponent(nombre);
+      window.open(viewerUrl, '_blank');
+    } catch(e) {
+      toast('Error de acceso', 'err');
+    }
+  } else {
+    // URL externa (Vercel) — abrir directamente
+    window.open(storageUrl, '_blank');
+  }
 }
 function closeViewer() { showView('dashboards'); }
 function openTab() { if (viewerUrl) window.open(viewerUrl, '_blank'); }
