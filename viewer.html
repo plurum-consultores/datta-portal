@@ -120,9 +120,16 @@ async function init() {
   document.getElementById('dash-title').textContent = nombre;
   document.getElementById('bar').style.display = 'flex';
 
-  const frame = document.getElementById('frame');
-  frame.style.display = 'block';
-  frame.src = url;
+  // Descargar el HTML y renderizarlo directamente
+  try {
+    const resp = await fetch(url);
+    const html = await resp.text();
+    const frame = document.getElementById('frame');
+    frame.style.display = 'block';
+    frame.srcdoc = html;
+  } catch(e) {
+    showError('No se pudo cargar el dashboard. Intenta de nuevo.');
+  }
 }
 
 init();
